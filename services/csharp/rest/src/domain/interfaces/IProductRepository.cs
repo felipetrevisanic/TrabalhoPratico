@@ -9,4 +9,5 @@ public interface IProductRepository
     Product Add(Product product);
     Product Update(Product product);
     bool Delete(int id);
+    bool DeleteAll();
 }

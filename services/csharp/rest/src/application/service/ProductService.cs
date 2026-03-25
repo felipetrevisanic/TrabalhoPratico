@@ -64,4 +64,9 @@ public class ProductService : IProductService
     {
         return _productRepository.Delete(id);
     }
+
+    public bool DeleteProduct()
+    {
+        return _productRepository.DeleteAll();
+    }
 }

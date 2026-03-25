@@ -75,4 +75,15 @@ public class ProductRepository : IProductRepository
         Products.Remove(product);
         return true;
     }
+
+    public bool DeleteAll()
+    {
+        if (Products.Count == 0)
+        {
+            return false;
+        }
+
+        Products.Clear();
+        return true;
+    }
 }

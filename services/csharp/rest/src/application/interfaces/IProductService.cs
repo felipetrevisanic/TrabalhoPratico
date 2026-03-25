@@ -10,4 +10,5 @@ public interface IProductService
     ProductResponseDto InsertProduct(CreateProductRequestDto request);
     ProductResponseDto UpdateProduct(int id, UpdateProductRequestDto request);
     bool DeleteProduct(int id);
+    bool DeleteProduct();
 }

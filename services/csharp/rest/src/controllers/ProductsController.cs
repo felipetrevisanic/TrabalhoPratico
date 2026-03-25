@@ -56,4 +56,17 @@ public class ProductController : ControllerBase
 
         return NoContent();
     }
+
+    [HttpDelete("all")]
+    public IActionResult DeleteProduct()
+    {
+        var deleted = _productService.DeleteProduct();
+
+        if (!deleted)
+        {
+            return NotFound();
+        }
+
+        return NoContent();
+    }
 }
