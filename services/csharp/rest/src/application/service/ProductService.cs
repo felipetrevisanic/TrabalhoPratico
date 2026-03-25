@@ -1,31 +1,67 @@
 using src.application.interfaces;
+using src.domain.entities;
+using src.domain.interfaces;
+using src.DTO.requests;
+using src.DTO.response;
+using src.mappings;
 
 namespace src.application.service;
 
 public class ProductService : IProductService
 {
-    public string GetProductById(int id)
+    private readonly IProductRepository _productRepository;
+
+    public ProductService(IProductRepository productRepository)
     {
-        return $"Product {id}";
+        _productRepository = productRepository;
     }
 
-    public IEnumerable<string> GetAllProducts()
+    public ProductResponseDto GetProductById(int id)
     {
-        return
-        [
-            "Product 1",
-            "Product 2",
-            "Product 3"
-        ];
+        var product = _productRepository.GetById(id)
+            ?? new Product
+            {
+                Id = id,
+                Name = $"Product {id}",
+                Description = "Product not found in sample list",
+                Price = 0,
+                StockQuantity = 0,
+                CreatedAt = DateTime.UtcNow
+            };
+
+        return product.ToResponseDto();
     }
 
-    public string InsertProduct()
+    public IEnumerable<ProductResponseDto> GetAllProducts()
     {
-        return "Product inserted successfully";
+        return _productRepository.GetAll().Select(product => product.ToResponseDto());
     }
 
-    public string UpdateProduct()
+    public ProductResponseDto InsertProduct(CreateProductRequestDto request)
     {
-        return "Product updated successfully";
+        var product = request.ToEntity();
+        var createdProduct = _productRepository.Add(product);
+        return createdProduct.ToResponseDto();
+    }
+
+    public ProductResponseDto UpdateProduct(int id, UpdateProductRequestDto request)
+    {
+        var product = _productRepository.GetById(id);
+
+        if (product is null)
+        {
+            product = request.ToEntityFromUpdate(id);
+            var createdProduct = _productRepository.Add(product);
+            return createdProduct.ToResponseDto();
+        }
+
+        request.UpdateEntity(product);
+        var updatedProduct = _productRepository.Update(product);
+        return updatedProduct.ToResponseDto();
+    }
+
+    public bool DeleteProduct(int id)
+    {
+        return _productRepository.Delete(id);
     }
 }

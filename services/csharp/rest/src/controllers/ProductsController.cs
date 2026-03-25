@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using src.application.interfaces;
+using src.DTO.requests;
+using src.DTO.response;
 
 namespace src.controllers;
 
@@ -15,30 +17,43 @@ public class ProductController : ControllerBase
     }
 
     [HttpGet]
-    public ActionResult<string> GetProductById([FromQuery] int id)
+    public ActionResult<ProductResponseDto> GetProductById([FromQuery] int id)
     {
         var product = _productService.GetProductById(id);
         return Ok(product);
     }
 
     [HttpGet("all")]
-    public ActionResult<IEnumerable<string>> GetAllProduct()
+    public ActionResult<IEnumerable<ProductResponseDto>> GetAllProduct()
     {
         var products = _productService.GetAllProducts();
         return Ok(products);
     }
 
     [HttpPost]
-    public ActionResult<string> InsertProduct()
+    public ActionResult<ProductResponseDto> InsertProduct([FromBody] CreateProductRequestDto request)
     {
-        var result = _productService.InsertProduct();
+        var result = _productService.InsertProduct(request);
         return Ok(result);
     }
 
-    [HttpPut]
-    public ActionResult<string> UpdateProduct()
+    [HttpPut("{id:int}")]
+    public ActionResult<ProductResponseDto> UpdateProduct(int id, [FromBody] UpdateProductRequestDto request)
     {
-        var result = _productService.UpdateProduct();
+        var result = _productService.UpdateProduct(id, request);
         return Ok(result);
+    }
+
+    [HttpDelete("{id:int}")]
+    public IActionResult DeleteProduct(int id)
+    {
+        var deleted = _productService.DeleteProduct(id);
+
+        if (!deleted)
+        {
+            return NotFound();
+        }
+
+        return NoContent();
     }
 }

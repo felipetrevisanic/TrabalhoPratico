@@ -1,9 +1,13 @@
+using src.DTO.requests;
+using src.DTO.response;
+
 namespace src.application.interfaces;
 
 public interface IProductService
 {
-    string GetProductById(int id);
-    IEnumerable<string> GetAllProducts();
-    string InsertProduct();
-    string UpdateProduct();
+    ProductResponseDto GetProductById(int id);
+    IEnumerable<ProductResponseDto> GetAllProducts();
+    ProductResponseDto InsertProduct(CreateProductRequestDto request);
+    ProductResponseDto UpdateProduct(int id, UpdateProductRequestDto request);
+    bool DeleteProduct(int id);
 }
