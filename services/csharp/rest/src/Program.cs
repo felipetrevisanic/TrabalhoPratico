@@ -1,12 +1,16 @@
+using Microsoft.EntityFrameworkCore;
 using src.application.interfaces;
 using src.application.service;
 using src.domain.interfaces;
+using src.infraestructure.Data;
 using src.infraestructure.Repositories;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllers();
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 builder.Services.AddScoped<IProductService, ProductService>();
 builder.Services.AddScoped<IProductRepository, ProductRepository>();
 builder.Services.AddEndpointsApiExplorer();

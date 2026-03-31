@@ -1,56 +1,47 @@
+using Microsoft.EntityFrameworkCore;
 using src.domain.entities;
 using src.domain.interfaces;
+using src.infraestructure.Data;
 
 namespace src.infraestructure.Repositories;
 
 public class ProductRepository : IProductRepository
 {
-    private static readonly List<Product> Products =
-    [
-        new()
-        {
-            Id = 1,
-            Name = "Notebook",
-            Description = "Notebook para desenvolvimento",
-            Price = 4500.00m,
-            StockQuantity = 10,
-            CreatedAt = DateTime.UtcNow
-        },
-        new()
-        {
-            Id = 2,
-            Name = "Mouse",
-            Description = "Mouse sem fio",
-            Price = 120.50m,
-            StockQuantity = 25,
-            CreatedAt = DateTime.UtcNow
-        }
-    ];
+    private readonly AppDbContext _context;
+
+    public ProductRepository(AppDbContext context)
+    {
+        _context = context;
+    }
 
     public Product? GetById(int id)
     {
-        return Products.FirstOrDefault(product => product.Id == id);
+        return _context.Products.AsNoTracking().FirstOrDefault(product => product.Id == id);
     }
 
     public IEnumerable<Product> GetAll()
     {
-        return Products;
+        return _context.Products
+            .AsNoTracking()
+            .OrderBy(product => product.Id)
+            .ToList();
     }
 
     public Product Add(Product product)
     {
-        product.Id = Products.Count == 0 ? 1 : Products.Max(existingProduct => existingProduct.Id) + 1;
-        Products.Add(product);
+        _context.Products.Add(product);
+        _context.SaveChanges();
         return product;
     }
 
     public Product Update(Product product)
     {
-        var existingProduct = GetById(product.Id);
+        var existingProduct = _context.Products.FirstOrDefault(existingProduct => existingProduct.Id == product.Id);
 
         if (existingProduct is null)
         {
-            Products.Add(product);
+            _context.Products.Add(product);
+            _context.SaveChanges();
             return product;
         }
 
@@ -58,32 +49,38 @@ public class ProductRepository : IProductRepository
         existingProduct.Description = product.Description;
         existingProduct.Price = product.Price;
         existingProduct.StockQuantity = product.StockQuantity;
+        existingProduct.CreatedAt = product.CreatedAt;
         existingProduct.UpdatedAt = product.UpdatedAt;
+        _context.SaveChanges();
 
         return existingProduct;
     }
 
     public bool Delete(int id)
     {
-        var product = GetById(id);
+        var product = _context.Products.FirstOrDefault(existingProduct => existingProduct.Id == id);
 
         if (product is null)
         {
             return false;
         }
 
-        Products.Remove(product);
+        _context.Products.Remove(product);
+        _context.SaveChanges();
         return true;
     }
 
     public bool DeleteAll()
     {
-        if (Products.Count == 0)
+        var products = _context.Products.ToList();
+
+        if (products.Count == 0)
         {
             return false;
         }
 
-        Products.Clear();
+        _context.Products.RemoveRange(products);
+        _context.SaveChanges();
         return true;
     }
 }
