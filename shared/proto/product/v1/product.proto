@@ -1,0 +1,64 @@
+syntax = "proto3";
+
+package product.v1;
+
+option csharp_namespace = "ProductGrpc.V1";
+option go_package = "internal/grpc/gen/productv1;productv1";
+
+service ProductService {
+  rpc GetProductById(GetProductByIdRequest) returns (ProductResponse);
+  rpc GetAllProducts(GetAllProductsRequest) returns (GetAllProductsResponse);
+  rpc CreateProduct(CreateProductRequest) returns (ProductResponse);
+  rpc UpdateProduct(UpdateProductRequest) returns (ProductResponse);
+  rpc DeleteProduct(DeleteProductRequest) returns (DeleteProductResponse);
+  rpc DeleteAllProducts(DeleteAllProductsRequest) returns (DeleteAllProductsResponse);
+}
+
+message ProductResponse {
+  int32 id = 1;
+  string name = 2;
+  string description = 3;
+  double price = 4;
+  int32 stock_quantity = 5;
+  string created_at = 6;
+  string updated_at = 7;
+}
+
+message GetProductByIdRequest {
+  int32 id = 1;
+}
+
+message GetAllProductsRequest {}
+
+message GetAllProductsResponse {
+  repeated ProductResponse products = 1;
+}
+
+message CreateProductRequest {
+  string name = 1;
+  string description = 2;
+  double price = 3;
+  int32 stock_quantity = 4;
+}
+
+message UpdateProductRequest {
+  int32 id = 1;
+  string name = 2;
+  string description = 3;
+  double price = 4;
+  int32 stock_quantity = 5;
+}
+
+message DeleteProductRequest {
+  int32 id = 1;
+}
+
+message DeleteProductResponse {
+  bool deleted = 1;
+}
+
+message DeleteAllProductsRequest {}
+
+message DeleteAllProductsResponse {
+  bool deleted = 1;
+}
