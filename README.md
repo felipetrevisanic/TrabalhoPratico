@@ -52,6 +52,54 @@ O script espera os 9 servicos ficarem disponiveis e valida:
 - queries GraphQL
 - chamadas gRPC com `grpcurl`
 
+## Carga com k6
+
+O teste de carga fica em [k6/api-load.js](/home/felipe/Documentos/Programming/TCC/TrabalhoPratico/k6/api-load.js) e usa o mesmo dataset deterministico para todas as APIs.
+
+Perfis suportados:
+
+- `single`: 1 produto
+- `small`: 25 produtos
+- `medium`: 100 produtos
+- `large`: 500 produtos
+
+Aliases em portugues aceitos pelo runner:
+
+- `unico`
+- `pequeno`
+- `medio`
+- `grande`
+
+Runner sequencial por projeto:
+
+```bash
+./scripts/run-k6-suite.sh single
+./scripts/run-k6-suite.sh small
+./scripts/run-k6-suite.sh medium
+./scripts/run-k6-suite.sh large
+```
+
+Tambem e possivel executar um unico projeto:
+
+```bash
+./scripts/run-k6-suite.sh medium go-graphql
+```
+
+Comportamento do runner:
+
+- executa um projeto por vez
+- chama `delete all` no inicio da rodada
+- executa `create`, `get by id`, `get all` e `update`
+- chama `delete all` ao final antes de seguir para o proximo projeto
+- grava o resumo de cada execucao em `result/k6/`
+
+Metricas validadas:
+
+- `checks > 99%`
+- `request_failure_rate < 1%`
+- `operation_duration` com `p(95)` por perfil
+- contagem minima de criacoes e atualizacoes esperadas
+
 ## Observacoes
 
 - O banco eh inicializado com `database/init.sql` e `database/seed.sql`.

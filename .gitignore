@@ -9,3 +9,6 @@ Thumbs.db
 # Environment files
 .env
 .env.*
+
+# Generated test artifacts
+/result/k6/

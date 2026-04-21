@@ -1,0 +1,403 @@
+import http from 'k6/http';
+import grpc from 'k6/net/grpc';
+import { check } from 'k6';
+import { Counter, Rate, Trend } from 'k6/metrics';
+
+import { resolveDataProfile, resolveTarget } from './config.js';
+import { buildProducts, buildUpdatedProduct, pickIndexes } from './data.js';
+
+const target = resolveTarget(__ENV.TARGET_ID);
+const profile = resolveDataProfile(__ENV.DATA_PROFILE);
+const products = buildProducts(profile);
+
+export const requestFailureRate = new Rate('request_failure_rate');
+export const operationDuration = new Trend('operation_duration', true);
+export const createdProductsCounter = new Counter('created_products');
+export const updatedProductsCounter = new Counter('updated_products');
+export const deletedProductsCounter = new Counter('deleted_products');
+
+export const options = {
+  vus: profile.vus,
+  iterations: profile.iterations,
+  thresholds: {
+    checks: ['rate>0.99'],
+    request_failure_rate: ['rate<0.01'],
+    operation_duration: [`p(95)<${profile.durationP95Ms}`],
+    created_products: [`count>=${profile.productCount}`],
+    updated_products: [`count>=${profile.updateSampleSize}`],
+    deleted_products: ['count>=1'],
+  },
+  summaryTrendStats: ['avg', 'min', 'med', 'max', 'p(90)', 'p(95)'],
+};
+
+const grpcClient = target.protocol === 'grpc' ? new grpc.Client() : null;
+if (grpcClient) {
+  grpcClient.load(['../shared/proto'], 'product/v1/product.proto');
+}
+
+function recordResult(operationName, ok, durationMs) {
+  requestFailureRate.add(ok ? 0 : 1, { operation: operationName, target: target.id });
+  operationDuration.add(durationMs, { operation: operationName, target: target.id });
+}
+
+function recordCheck(operationName, result, checksMap) {
+  const ok = check(result, checksMap, { operation: operationName, target: target.id });
+  return ok;
+}
+
+function ensureValue(operationName, value, message) {
+  if (value === undefined || value === null) {
+    throw new Error(`${operationName}: ${message}`);
+  }
+
+  return value;
+}
+
+function restHeaders() {
+  return {
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  };
+}
+
+function httpDeleteAllowingNotFound(path) {
+  const startedAt = Date.now();
+  const response = http.del(`${target.baseUrl}${path}`);
+  const ok = recordCheck('cleanup_delete_all', response, {
+    'cleanup delete-all status ok': (res) => res.status === 204 || res.status === 404,
+  });
+  recordResult('cleanup_delete_all', ok, Date.now() - startedAt);
+}
+
+function graphQLRequest(operationName, query, variables = {}) {
+  const startedAt = Date.now();
+  const response = http.post(
+    target.baseUrl,
+    JSON.stringify({ query, variables }),
+    restHeaders(),
+  );
+  const ok = recordCheck(operationName, response, {
+    'graphql status is 200': (res) => res.status === 200,
+    'graphql has no errors': (res) => {
+      const body = JSON.parse(res.body);
+      return !body.errors;
+    },
+  });
+  recordResult(operationName, ok, Date.now() - startedAt);
+  return JSON.parse(response.body);
+}
+
+function grpcInvoke(operationName, methodName, payload) {
+  const startedAt = Date.now();
+  const response = grpcClient.invoke(methodName, payload);
+  const ok = recordCheck(operationName, response, {
+    'grpc status is OK': (res) => res && res.status === grpc.StatusOK,
+  });
+  recordResult(operationName, ok, Date.now() - startedAt);
+  return response;
+}
+
+function ensureGrpcConnection() {
+  if (grpcClient) {
+    grpcClient.connect(target.address, { plaintext: true });
+  }
+}
+
+function cleanupBeforeRun() {
+  if (target.protocol === 'rest') {
+    httpDeleteAllowingNotFound('/Product/all');
+    return;
+  }
+
+  if (target.protocol === 'graphql') {
+    graphQLRequest('cleanup_delete_all', 'mutation { deleteAllProducts }');
+    return;
+  }
+
+  ensureGrpcConnection();
+  grpcInvoke('cleanup_delete_all', 'product.v1.ProductService/DeleteAllProducts', {});
+}
+
+function cleanupAfterRun() {
+  if (target.protocol === 'rest') {
+    const startedAt = Date.now();
+    const response = http.del(`${target.baseUrl}/Product/all`);
+    const ok = recordCheck('final_delete_all', response, {
+      'final delete-all status ok': (res) => res.status === 204 || res.status === 404,
+    });
+    recordResult('final_delete_all', ok, Date.now() - startedAt);
+    if (ok && response.status === 204) {
+      deletedProductsCounter.add(1, { target: target.id });
+    }
+    return;
+  }
+
+  if (target.protocol === 'graphql') {
+    const body = graphQLRequest('final_delete_all', 'mutation { deleteAllProducts }');
+    if (body.data?.deleteAllProducts) {
+      deletedProductsCounter.add(1, { target: target.id });
+    }
+    return;
+  }
+
+  ensureGrpcConnection();
+  const response = grpcInvoke('final_delete_all', 'product.v1.ProductService/DeleteAllProducts', {});
+  if (response.message?.deleted) {
+    deletedProductsCounter.add(1, { target: target.id });
+  }
+}
+
+function createProductRest(product) {
+  const startedAt = Date.now();
+  const response = http.post(`${target.baseUrl}/Product`, JSON.stringify(product), restHeaders());
+  const ok = recordCheck('create_product', response, {
+    'rest create status is 200': (res) => res.status === 200,
+  });
+  recordResult('create_product', ok, Date.now() - startedAt);
+  const body = JSON.parse(response.body);
+  createdProductsCounter.add(1, { target: target.id });
+  return ensureValue('create_product', body.id, 'resposta REST sem id');
+}
+
+function getAllRest(expectedCount) {
+  const startedAt = Date.now();
+  const response = http.get(`${target.baseUrl}/Product/all`);
+  const ok = recordCheck('get_all_products', response, {
+    'rest get-all status is 200': (res) => res.status === 200,
+    'rest get-all expected count': (res) => JSON.parse(res.body).length === expectedCount,
+  });
+  recordResult('get_all_products', ok, Date.now() - startedAt);
+}
+
+function getByIdRest(id, expectedName) {
+  const startedAt = Date.now();
+  const response = http.get(`${target.baseUrl}/Product?id=${id}`);
+  const ok = recordCheck('get_product_by_id', response, {
+    'rest get-by-id status is 200': (res) => res.status === 200,
+    'rest get-by-id expected name': (res) => JSON.parse(res.body).name === expectedName,
+  });
+  recordResult('get_product_by_id', ok, Date.now() - startedAt);
+}
+
+function updateProductRest(id, product) {
+  const startedAt = Date.now();
+  const response = http.put(
+    `${target.baseUrl}/Product/${id}`,
+    JSON.stringify(product),
+    restHeaders(),
+  );
+  const ok = recordCheck('update_product', response, {
+    'rest update status is 200': (res) => res.status === 200,
+    'rest update expected name': (res) => JSON.parse(res.body).name === product.name,
+  });
+  recordResult('update_product', ok, Date.now() - startedAt);
+  updatedProductsCounter.add(1, { target: target.id });
+}
+
+function createProductGraphQL(product) {
+  const body = graphQLRequest(
+    'create_product',
+    `
+      mutation ($input: CreateProductInput!) {
+        createProduct(input: $input) {
+          id
+          name
+        }
+      }
+    `,
+    { input: product },
+  );
+  createdProductsCounter.add(1, { target: target.id });
+  return ensureValue('create_product', body.data?.createProduct?.id, 'resposta GraphQL sem id');
+}
+
+function getAllGraphQL(expectedCount) {
+  const body = graphQLRequest(
+    'get_all_products',
+    `
+      query {
+        allProducts {
+          id
+          name
+        }
+      }
+    `,
+  );
+
+  const ok = check(body, {
+    'graphql get-all expected count': (data) => data.data.allProducts.length === expectedCount,
+  }, { operation: 'get_all_products', target: target.id });
+  requestFailureRate.add(ok ? 0 : 1, { operation: 'get_all_products_count', target: target.id });
+}
+
+function getByIdGraphQL(id, expectedName) {
+  const body = graphQLRequest(
+    'get_product_by_id',
+    `
+      query ($id: Int!) {
+        productById(id: $id) {
+          id
+          name
+        }
+      }
+    `,
+    { id },
+  );
+
+  const ok = check(body, {
+    'graphql get-by-id expected name': (data) => data.data.productById.name === expectedName,
+  }, { operation: 'get_product_by_id_name', target: target.id });
+  requestFailureRate.add(ok ? 0 : 1, { operation: 'get_product_by_id_name', target: target.id });
+}
+
+function updateProductGraphQL(id, product) {
+  const body = graphQLRequest(
+    'update_product',
+    `
+      mutation ($id: Int!, $input: UpdateProductInput!) {
+        updateProduct(id: $id, input: $input) {
+          id
+          name
+        }
+      }
+    `,
+    {
+      id,
+      input: {
+        ...product,
+        stockQuantity: product.stockQuantity,
+      },
+    },
+  );
+
+  const ok = check(body, {
+    'graphql update expected name': (data) => data.data.updateProduct.name === product.name,
+  }, { operation: 'update_product_name', target: target.id });
+  requestFailureRate.add(ok ? 0 : 1, { operation: 'update_product_name', target: target.id });
+  updatedProductsCounter.add(1, { target: target.id });
+}
+
+function createProductGrpc(product) {
+  const response = grpcInvoke('create_product', 'product.v1.ProductService/CreateProduct', {
+    name: product.name,
+    description: product.description,
+    price: product.price,
+    stock_quantity: product.stockQuantity,
+  });
+  createdProductsCounter.add(1, { target: target.id });
+  return ensureValue('create_product', response.message?.id, 'resposta gRPC sem id');
+}
+
+function getAllGrpc(expectedCount) {
+  const response = grpcInvoke('get_all_products', 'product.v1.ProductService/GetAllProducts', {});
+  const ok = check(response, {
+    'grpc get-all expected count': (res) => res.message.products.length === expectedCount,
+  }, { operation: 'get_all_products_count', target: target.id });
+  requestFailureRate.add(ok ? 0 : 1, { operation: 'get_all_products_count', target: target.id });
+}
+
+function getByIdGrpc(id, expectedName) {
+  const response = grpcInvoke('get_product_by_id', 'product.v1.ProductService/GetProductById', { id });
+  const ok = check(response, {
+    'grpc get-by-id expected name': (res) => res.message.name === expectedName,
+  }, { operation: 'get_product_by_id_name', target: target.id });
+  requestFailureRate.add(ok ? 0 : 1, { operation: 'get_product_by_id_name', target: target.id });
+}
+
+function updateProductGrpc(id, product) {
+  const response = grpcInvoke('update_product', 'product.v1.ProductService/UpdateProduct', {
+    id,
+    name: product.name,
+    description: product.description,
+    price: product.price,
+    stock_quantity: product.stockQuantity,
+  });
+  const ok = check(response, {
+    'grpc update expected name': (res) => res.message.name === product.name,
+  }, { operation: 'update_product_name', target: target.id });
+  requestFailureRate.add(ok ? 0 : 1, { operation: 'update_product_name', target: target.id });
+  updatedProductsCounter.add(1, { target: target.id });
+}
+
+function runRestScenario() {
+  const ids = products.map((product) => createProductRest(product));
+  getAllRest(products.length);
+
+  const readIndexes = pickIndexes(ids.length, profile.readSampleSize);
+  for (const index of readIndexes) {
+    getByIdRest(ids[index], products[index].name);
+  }
+
+  const updateIndexes = pickIndexes(ids.length, profile.updateSampleSize);
+  for (const index of updateIndexes) {
+    const updated = buildUpdatedProduct(products[index], index);
+    updateProductRest(ids[index], updated);
+  }
+}
+
+function runGraphQLScenario() {
+  const ids = products.map((product) => createProductGraphQL(product));
+  getAllGraphQL(products.length);
+
+  const readIndexes = pickIndexes(ids.length, profile.readSampleSize);
+  for (const index of readIndexes) {
+    getByIdGraphQL(ids[index], products[index].name);
+  }
+
+  const updateIndexes = pickIndexes(ids.length, profile.updateSampleSize);
+  for (const index of updateIndexes) {
+    updateProductGraphQL(ids[index], buildUpdatedProduct(products[index], index));
+  }
+}
+
+function runGrpcScenario() {
+  ensureGrpcConnection();
+  const ids = products.map((product) => createProductGrpc(product));
+  getAllGrpc(products.length);
+
+  const readIndexes = pickIndexes(ids.length, profile.readSampleSize);
+  for (const index of readIndexes) {
+    getByIdGrpc(ids[index], products[index].name);
+  }
+
+  const updateIndexes = pickIndexes(ids.length, profile.updateSampleSize);
+  for (const index of updateIndexes) {
+    updateProductGrpc(ids[index], buildUpdatedProduct(products[index], index));
+  }
+}
+
+export function setup() {
+  cleanupBeforeRun();
+  return { targetId: target.id, profile: profile.label };
+}
+
+export default function () {
+  if (target.protocol === 'rest') {
+    runRestScenario();
+    return;
+  }
+
+  if (target.protocol === 'graphql') {
+    runGraphQLScenario();
+    return;
+  }
+
+  runGrpcScenario();
+}
+
+export function teardown() {
+  cleanupAfterRun();
+  if (grpcClient) {
+    grpcClient.close();
+  }
+}
+
+export function handleSummary(data) {
+  const failureRate = data.metrics.request_failure_rate?.values?.rate ?? 0;
+  const status = failureRate > 0.01 ? 'com falhas' : 'sem falhas';
+
+  return {
+    stdout: `Suite finalizada para ${target.id} com perfil ${profile.label} (${status})\n`,
+  };
+}
