@@ -1,0 +1,11 @@
+**/bin
+**/obj
+**/target
+**/.vs
+**/.vscode
+**/.idea
+**/*.user
+**/*.suo
+**/*.cache
+.git
+.codex

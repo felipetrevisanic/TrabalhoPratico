@@ -1,0 +1,11 @@
+# Local tooling and downloaded binaries
+/.tools/
+/.codex
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Environment files
+.env
+.env.*

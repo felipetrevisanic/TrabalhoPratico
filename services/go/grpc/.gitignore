@@ -1,0 +1,20 @@
+# Build artifacts
+/grpc
+/bin/
+/dist/
+
+# Generated test output
+*.out
+coverage.out
+coverage/
+
+# IDE and OS files
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Logs and temp files
+*.log
+*.tmp
+*.temp
