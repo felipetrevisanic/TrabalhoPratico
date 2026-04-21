@@ -1,0 +1,177 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: tcc-postgres
+    environment:
+      POSTGRES_DB: tcc_banco
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+      - ./database/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d tcc_banco"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  csharp-rest:
+    build:
+      context: .
+      dockerfile: services/csharp/rest/Dockerfile
+    container_name: tcc-csharp-rest
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=tcc_banco;Username=postgres;Password=postgres
+    ports:
+      - "5107:5107"
+
+  csharp-graphql:
+    build:
+      context: .
+      dockerfile: services/csharp/graphql/Dockerfile
+    container_name: tcc-csharp-graphql
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=tcc_banco;Username=postgres;Password=postgres
+    ports:
+      - "5207:5207"
+
+  csharp-grpc:
+    build:
+      context: .
+      dockerfile: services/csharp/grpc/Dockerfile
+    container_name: tcc-csharp-grpc
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=tcc_banco;Username=postgres;Password=postgres
+      GRPC_PORT: 5307
+    ports:
+      - "5307:5307"
+
+  go-rest:
+    build:
+      context: .
+      dockerfile: services/go/rest/Dockerfile
+    container_name: tcc-go-rest
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: tcc_banco
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_SSLMODE: disable
+      HTTP_ADDRESS: :8080
+    ports:
+      - "8080:8080"
+
+  go-graphql:
+    build:
+      context: .
+      dockerfile: services/go/graphql/Dockerfile
+    container_name: tcc-go-graphql
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: tcc_banco
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_SSLMODE: disable
+      HTTP_ADDRESS: :8090
+    ports:
+      - "8090:8090"
+
+  go-grpc:
+    build:
+      context: .
+      dockerfile: services/go/grpc/Dockerfile
+    container_name: tcc-go-grpc
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: tcc_banco
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_SSLMODE: disable
+      GRPC_ADDRESS: :50051
+    ports:
+      - "50051:50051"
+
+  rust-rest:
+    build:
+      context: .
+      dockerfile: services/rust/rest/Dockerfile
+    container_name: tcc-rust-rest
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: tcc_banco
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_SSLMODE: disable
+      HTTP_HOST: 0.0.0.0
+      HTTP_PORT: 8083
+    ports:
+      - "8083:8083"
+
+  rust-graphql:
+    build:
+      context: .
+      dockerfile: services/rust/graphql/Dockerfile
+    container_name: tcc-rust-graphql
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: tcc_banco
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_SSLMODE: disable
+      HTTP_HOST: 0.0.0.0
+      HTTP_PORT: 8091
+    ports:
+      - "8091:8091"
+
+  rust-grpc:
+    build:
+      context: .
+      dockerfile: services/rust/grpc/Dockerfile
+    container_name: tcc-rust-grpc
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: tcc_banco
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_SSLMODE: disable
+      GRPC_HOST: 0.0.0.0
+      GRPC_PORT: 50052
+    ports:
+      - "50052:50052"
+
+volumes:
+  postgres_data:

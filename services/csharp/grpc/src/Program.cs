@@ -8,10 +8,11 @@ using src.infraestructure.Repositories;
 using src.services;
 
 var builder = WebApplication.CreateBuilder(args);
+var grpcPort = builder.Configuration.GetValue("GRPC_PORT", 5307);
 
 builder.WebHost.ConfigureKestrel(options =>
 {
-    options.ListenLocalhost(5307, listenOptions =>
+    options.ListenAnyIP(grpcPort, listenOptions =>
     {
         listenOptions.Protocols = HttpProtocols.Http2;
     });
