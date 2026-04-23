@@ -5,7 +5,7 @@ COPY services/go/rest/go.mod services/go/rest/go.sum ./
 RUN go mod download
 
 COPY services/go/rest/ ./
-RUN CGO_ENABLED=0 GOOS=linux go build -o /app/rest-api ./cmd/api
+RUN CGO_ENABLED=0 GOOS=linux go build -o /app/rest-api ./src
 
 FROM alpine:3.21 AS runtime
 WORKDIR /app

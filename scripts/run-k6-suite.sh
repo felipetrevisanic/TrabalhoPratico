@@ -34,11 +34,13 @@ fi
 for target in "${TARGETS[@]}"; do
   timestamp="$(date +%Y%m%d-%H%M%S)"
   summary_file="${RESULT_DIR}/${timestamp}-${PROFILE_INPUT}-${target}-summary.json"
+  html_file="${RESULT_DIR}/${timestamp}-${PROFILE_INPUT}-${target}-report.html"
 
   echo "Executando perfil ${PROFILE_INPUT} para ${target}"
   k6 run \
     -e TARGET_ID="${target}" \
     -e DATA_PROFILE="${PROFILE_INPUT}" \
+    -e HTML_REPORT_FILE="${html_file}" \
     --summary-export "${summary_file}" \
     "${ROOT_DIR}/k6/api-load.js"
 done

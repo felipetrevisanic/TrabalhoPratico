@@ -1,9 +1,9 @@
 using src.application.interfaces;
 using src.domain.entities;
 using src.domain.interfaces;
-using src.DTO.requests;
-using src.DTO.response;
-using src.mappings;
+using src.interfaces.rest.mappings;
+using src.interfaces.rest.requests;
+using src.interfaces.rest.responses;
 
 namespace src.application.service;
 

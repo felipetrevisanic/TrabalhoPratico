@@ -393,11 +393,215 @@ export function teardown() {
   }
 }
 
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
+function formatMetricValue(value) {
+  if (typeof value !== 'number' || Number.isNaN(value)) {
+    return '-';
+  }
+
+  if (Number.isInteger(value)) {
+    return String(value);
+  }
+
+  return value.toFixed(4);
+}
+
+function buildMetricRows(data) {
+  const metricNames = [
+    'checks',
+    'request_failure_rate',
+    'operation_duration',
+    'created_products',
+    'updated_products',
+    'deleted_products',
+    'iterations',
+    'iteration_duration',
+  ];
+
+  return metricNames
+    .map((name) => {
+      const metric = data.metrics[name];
+      if (!metric) {
+        return '';
+      }
+
+      const values = metric.values || {};
+      const details = Object.entries(values)
+        .map(([key, value]) => `${escapeHtml(key)}: ${escapeHtml(formatMetricValue(value))}`)
+        .join('<br>');
+
+      return `
+        <tr>
+          <td>${escapeHtml(name)}</td>
+          <td>${escapeHtml(metric.type || '-')}</td>
+          <td>${details || '-'}</td>
+          <td>${escapeHtml((metric.thresholds && Object.keys(metric.thresholds).join(', ')) || '-')}</td>
+        </tr>
+      `;
+    })
+    .join('');
+}
+
+function buildHtmlReport(data, failureRate) {
+  const title = `k6 report - ${target.id} - ${profile.label}`;
+  const createdAt = new Date().toISOString();
+
+  return `<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>${escapeHtml(title)}</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f4efe6;
+        --panel: #fffdf8;
+        --ink: #1f2937;
+        --muted: #6b7280;
+        --line: #d6cfc2;
+        --accent: #b45309;
+        --ok: #166534;
+        --warn: #b91c1c;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+        background: linear-gradient(180deg, #f7f2ea 0%, var(--bg) 100%);
+        color: var(--ink);
+      }
+      main {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 32px 20px 48px;
+      }
+      .hero, .panel {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        box-shadow: 0 12px 30px rgba(64, 43, 17, 0.08);
+      }
+      .hero {
+        padding: 24px;
+        margin-bottom: 20px;
+      }
+      h1, h2 { margin: 0 0 12px; }
+      h1 { font-size: 2rem; }
+      h2 { font-size: 1.1rem; }
+      .muted { color: var(--muted); }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 12px;
+        margin-top: 20px;
+      }
+      .card {
+        padding: 16px;
+        border-radius: 14px;
+        border: 1px solid var(--line);
+        background: #fffaf1;
+      }
+      .label {
+        display: block;
+        color: var(--muted);
+        font-size: 0.85rem;
+        margin-bottom: 8px;
+      }
+      .value {
+        font-size: 1.35rem;
+        font-weight: 700;
+      }
+      .ok { color: var(--ok); }
+      .warn { color: var(--warn); }
+      .panel {
+        padding: 20px;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      th, td {
+        padding: 12px 10px;
+        text-align: left;
+        vertical-align: top;
+        border-top: 1px solid var(--line);
+      }
+      th {
+        border-top: none;
+        color: var(--muted);
+        font-weight: 600;
+      }
+      @media (max-width: 720px) {
+        h1 { font-size: 1.5rem; }
+        th, td { font-size: 0.92rem; }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section class="hero">
+        <h1>${escapeHtml(title)}</h1>
+        <p class="muted">Gerado em ${escapeHtml(createdAt)}</p>
+        <div class="grid">
+          <div class="card">
+            <span class="label">Target</span>
+            <span class="value">${escapeHtml(target.id)}</span>
+          </div>
+          <div class="card">
+            <span class="label">Perfil</span>
+            <span class="value">${escapeHtml(profile.label)}</span>
+          </div>
+          <div class="card">
+            <span class="label">Falha</span>
+            <span class="value ${failureRate > 0.01 ? 'warn' : 'ok'}">${escapeHtml(formatMetricValue(failureRate * 100))}%</span>
+          </div>
+          <div class="card">
+            <span class="label">p95 operacao</span>
+            <span class="value">${escapeHtml(formatMetricValue(data.metrics.operation_duration?.values?.['p(95)']))} ms</span>
+          </div>
+        </div>
+      </section>
+      <section class="panel">
+        <h2>Metricas principais</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Metrica</th>
+              <th>Tipo</th>
+              <th>Valores</th>
+              <th>Thresholds</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${buildMetricRows(data)}
+          </tbody>
+        </table>
+      </section>
+    </main>
+  </body>
+</html>`;
+}
+
 export function handleSummary(data) {
   const failureRate = data.metrics.request_failure_rate?.values?.rate ?? 0;
   const status = failureRate > 0.01 ? 'com falhas' : 'sem falhas';
-
-  return {
+  const htmlReportFile = __ENV.HTML_REPORT_FILE;
+  const output = {
     stdout: `Suite finalizada para ${target.id} com perfil ${profile.label} (${status})\n`,
   };
+
+  if (htmlReportFile) {
+    output[htmlReportFile] = buildHtmlReport(data, failureRate);
+  }
+
+  return output;
 }

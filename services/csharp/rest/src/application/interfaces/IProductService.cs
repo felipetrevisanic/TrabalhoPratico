@@ -1,5 +1,5 @@
-using src.DTO.requests;
-using src.DTO.response;
+using src.interfaces.rest.requests;
+using src.interfaces.rest.responses;
 
 namespace src.application.interfaces;
 

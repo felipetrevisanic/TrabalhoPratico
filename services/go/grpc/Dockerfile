@@ -5,7 +5,7 @@ COPY services/go/grpc/go.mod services/go/grpc/go.sum ./
 RUN go mod download
 
 COPY services/go/grpc/ ./
-RUN CGO_ENABLED=0 GOOS=linux go build -o /app/grpc-api ./cmd/api
+RUN CGO_ENABLED=0 GOOS=linux go build -o /app/grpc-api ./src
 
 FROM alpine:3.21 AS runtime
 WORKDIR /app

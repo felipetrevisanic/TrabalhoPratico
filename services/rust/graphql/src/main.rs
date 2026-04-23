@@ -1,7 +1,8 @@
+mod application;
 mod config;
-mod graphql;
-mod product;
-mod repository;
+mod domain;
+mod infrastructure;
+mod interfaces;
 
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -16,9 +17,12 @@ use axum::{
 };
 use sqlx::postgres::PgPoolOptions;
 
+use crate::application::{
+    interfaces::product_service::ProductService, service::product_service::ProductServiceImpl,
+};
 use crate::config::AppConfig;
-use crate::graphql::{MutationRoot, ProductSchema, QueryRoot};
-use crate::repository::product_repository::PostgresProductRepository;
+use crate::infrastructure::repositories::product_repository::PostgresProductRepository;
+use crate::interfaces::graphql::{MutationRoot, ProductSchema, QueryRoot};
 
 #[tokio::main]
 async fn main() {
@@ -31,8 +35,9 @@ async fn main() {
         .expect("failed to connect to PostgreSQL");
 
     let repository = Arc::new(PostgresProductRepository::new(pool));
+    let service: Arc<dyn ProductService> = Arc::new(ProductServiceImpl::new(repository));
     let schema = Schema::build(QueryRoot, MutationRoot, async_graphql::EmptySubscription)
-        .data(repository)
+        .data(service)
         .finish();
 
     let app = Router::new()

@@ -2,8 +2,8 @@ using Microsoft.EntityFrameworkCore;
 using src.application.interfaces;
 using src.application.service;
 using src.domain.interfaces;
-using src.infraestructure.Data;
-using src.infraestructure.Repositories;
+using src.infrastructure.Data;
+using src.infrastructure.Repositories;
 
 var builder = WebApplication.CreateBuilder(args);
 

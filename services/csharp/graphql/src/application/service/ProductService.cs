@@ -1,8 +1,8 @@
 using src.application.interfaces;
 using src.domain.entities;
 using src.domain.interfaces;
-using src.graphql.inputs;
-using src.mappings;
+using src.interfaces.graphql.inputs;
+using src.interfaces.graphql.mappings;
 
 namespace src.application.service;
 

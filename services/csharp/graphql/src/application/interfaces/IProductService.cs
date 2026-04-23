@@ -1,5 +1,5 @@
 using src.domain.entities;
-using src.graphql.inputs;
+using src.interfaces.graphql.inputs;
 
 namespace src.application.interfaces;
 

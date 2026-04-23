@@ -91,7 +91,7 @@ Comportamento do runner:
 - chama `delete all` no inicio da rodada
 - executa `create`, `get by id`, `get all` e `update`
 - chama `delete all` ao final antes de seguir para o proximo projeto
-- grava o resumo de cada execucao em `result/k6/`
+- grava o resumo JSON e o relatorio HTML de cada execucao em `result/k6/`
 
 Metricas validadas:
 

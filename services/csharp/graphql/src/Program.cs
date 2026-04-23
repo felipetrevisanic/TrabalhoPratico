@@ -2,11 +2,11 @@ using Microsoft.EntityFrameworkCore;
 using src.application.interfaces;
 using src.application.service;
 using src.domain.interfaces;
-using src.graphql.inputs;
-using src.graphql.mutations;
-using src.graphql.queries;
-using src.infraestructure.Data;
-using src.infraestructure.Repositories;
+using src.infrastructure.Data;
+using src.infrastructure.Repositories;
+using src.interfaces.graphql.inputs;
+using src.interfaces.graphql.mutations;
+using src.interfaces.graphql.queries;
 
 var builder = WebApplication.CreateBuilder(args);
 

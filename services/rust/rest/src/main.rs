@@ -1,7 +1,8 @@
+mod application;
 mod config;
-mod http;
-mod product;
-mod repository;
+mod domain;
+mod infrastructure;
+mod interfaces;
 
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -9,9 +10,10 @@ use std::sync::Arc;
 use axum::Router;
 use sqlx::postgres::PgPoolOptions;
 
+use crate::application::service::product_service::ProductServiceImpl;
 use crate::config::AppConfig;
-use crate::http::create_router;
-use crate::repository::product_repository::PostgresProductRepository;
+use crate::infrastructure::repositories::product_repository::PostgresProductRepository;
+use crate::interfaces::rest::create_router;
 
 #[tokio::main]
 async fn main() {
@@ -24,7 +26,8 @@ async fn main() {
         .expect("failed to connect to PostgreSQL");
 
     let repository = Arc::new(PostgresProductRepository::new(pool));
-    let app: Router = create_router(repository);
+    let service = Arc::new(ProductServiceImpl::new(repository));
+    let app: Router = create_router(service);
 
     let listener = tokio::net::TcpListener::bind(config.http_address())
         .await

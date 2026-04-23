@@ -1,17 +1,22 @@
+mod application;
 mod config;
-mod grpc;
-mod product;
-mod repository;
+mod domain;
+mod infrastructure;
+mod interfaces;
 
 use std::sync::Arc;
 
 use sqlx::postgres::PgPoolOptions;
 use tonic::transport::Server;
 
+use crate::application::{
+    interfaces::product_service::ProductService, service::product_service::ProductServiceImpl,
+};
 use crate::config::AppConfig;
-use crate::grpc::productv1::product_service_server::ProductServiceServer;
-use crate::grpc::service::ProductGrpcService;
-use crate::repository::product_repository::PostgresProductRepository;
+use crate::infrastructure::repositories::product_repository::PostgresProductRepository;
+use crate::interfaces::grpc::{
+    ProductGrpcService, productv1::product_service_server::ProductServiceServer,
+};
 
 #[tokio::main]
 async fn main() {
@@ -24,7 +29,9 @@ async fn main() {
         .expect("failed to connect to PostgreSQL");
 
     let repository = Arc::new(PostgresProductRepository::new(pool));
-    let service = ProductGrpcService::new(repository);
+    let application_service: Arc<dyn ProductService> =
+        Arc::new(ProductServiceImpl::new(repository));
+    let service = ProductGrpcService::new(application_service);
 
     let address = config.grpc_address().parse().expect("invalid gRPC address");
 

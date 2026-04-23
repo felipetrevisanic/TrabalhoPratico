@@ -5,7 +5,7 @@ COPY services/go/graphql/go.mod services/go/graphql/go.sum ./
 RUN go mod download
 
 COPY services/go/graphql/ ./
-RUN CGO_ENABLED=0 GOOS=linux go build -o /app/graphql-api ./cmd/api
+RUN CGO_ENABLED=0 GOOS=linux go build -o /app/graphql-api ./src
 
 FROM alpine:3.21 AS runtime
 WORKDIR /app
