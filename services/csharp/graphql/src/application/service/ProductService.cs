@@ -15,18 +15,9 @@ public class ProductService : IProductService
         _productRepository = productRepository;
     }
 
-    public Product GetProductById(int id)
+    public Product? GetProductById(int id)
     {
-        return _productRepository.GetById(id)
-            ?? new Product
-            {
-                Id = id,
-                Name = $"Product {id}",
-                Description = "Product not found in sample list",
-                Price = 0,
-                StockQuantity = 0,
-                CreatedAt = DateTime.UtcNow
-            };
+        return _productRepository.GetById(id);
     }
 
     public IEnumerable<Product> GetAllProducts()

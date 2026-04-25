@@ -16,20 +16,10 @@ public class ProductService : IProductService
         _productRepository = productRepository;
     }
 
-    public ProductResponseDto GetProductById(int id)
+    public ProductResponseDto? GetProductById(int id)
     {
-        var product = _productRepository.GetById(id)
-            ?? new Product
-            {
-                Id = id,
-                Name = $"Product {id}",
-                Description = "Product not found in sample list",
-                Price = 0,
-                StockQuantity = 0,
-                CreatedAt = DateTime.UtcNow
-            };
-
-        return product.ToResponseDto();
+        var product = _productRepository.GetById(id);
+        return product?.ToResponseDto();
     }
 
     public IEnumerable<ProductResponseDto> GetAllProducts()

@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"time"
 
 	appinterfaces "rest/src/application/interfaces"
 	"rest/src/domain/entities"
@@ -82,16 +81,9 @@ func (h *Handler) getProductByID(response http.ResponseWriter, request *http.Req
 		return
 	}
 
-	// Preserve the C# behavior: return a placeholder when the record does not exist.
 	if item == nil {
-		item = &entities.Product{
-			ID:            id,
-			Name:          "Product " + idValue,
-			Description:   "Product not found in sample list",
-			Price:         0,
-			StockQuantity: 0,
-			CreatedAt:     time.Now().UTC(),
-		}
+		http.NotFound(response, request)
+		return
 	}
 
 	writeJSON(response, http.StatusOK, item)

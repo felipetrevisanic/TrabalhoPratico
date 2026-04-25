@@ -13,6 +13,8 @@ public static class ProductMappings
             Id = product.Id,
             Name = product.Name,
             Description = product.Description,
+            Category = product.Category,
+            Images = product.Images,
             Price = product.Price,
             StockQuantity = product.StockQuantity,
             CreatedAt = product.CreatedAt,
@@ -26,6 +28,8 @@ public static class ProductMappings
         {
             Name = request.Name,
             Description = request.Description,
+            Category = request.Category,
+            Images = request.Images,
             Price = request.Price,
             StockQuantity = request.StockQuantity,
             CreatedAt = DateTime.UtcNow
@@ -39,6 +43,8 @@ public static class ProductMappings
             Id = id,
             Name = request.Name,
             Description = request.Description,
+            Category = request.Category,
+            Images = request.Images,
             Price = request.Price,
             StockQuantity = request.StockQuantity,
             CreatedAt = DateTime.UtcNow,
@@ -50,6 +56,8 @@ public static class ProductMappings
     {
         product.Name = request.Name;
         product.Description = request.Description;
+        product.Category = request.Category;
+        product.Images = request.Images;
         product.Price = request.Price;
         product.StockQuantity = request.StockQuantity;
         product.UpdatedAt = DateTime.UtcNow;

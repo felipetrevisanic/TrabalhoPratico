@@ -23,7 +23,7 @@ impl ProductRepository for PostgresProductRepository {
     async fn get_by_id(&self, id: i32) -> Result<Option<Product>, sqlx::Error> {
         sqlx::query_as::<_, Product>(
             r#"
-            SELECT "Id", "Name", "Description", "Price", "StockQuantity", "CreatedAt", "UpdatedAt"
+            SELECT "Id", "Name", "Description", "Category", "Images", "Price", "StockQuantity", "CreatedAt", "UpdatedAt"
             FROM public.products
             WHERE "Id" = $1
             "#,
@@ -36,7 +36,7 @@ impl ProductRepository for PostgresProductRepository {
     async fn get_all(&self) -> Result<Vec<Product>, sqlx::Error> {
         sqlx::query_as::<_, Product>(
             r#"
-            SELECT "Id", "Name", "Description", "Price", "StockQuantity", "CreatedAt", "UpdatedAt"
+            SELECT "Id", "Name", "Description", "Category", "Images", "Price", "StockQuantity", "CreatedAt", "UpdatedAt"
             FROM public.products
             ORDER BY "Id"
             "#,
@@ -48,13 +48,15 @@ impl ProductRepository for PostgresProductRepository {
     async fn create(&self, request: CreateProductInput) -> Result<Product, sqlx::Error> {
         sqlx::query_as::<_, Product>(
             r#"
-            INSERT INTO public.products ("Name", "Description", "Price", "StockQuantity", "CreatedAt")
-            VALUES ($1, $2, $3, $4, $5)
-            RETURNING "Id", "Name", "Description", "Price", "StockQuantity", "CreatedAt", "UpdatedAt"
+            INSERT INTO public.products ("Name", "Description", "Category", "Images", "Price", "StockQuantity", "CreatedAt")
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
+            RETURNING "Id", "Name", "Description", "Category", "Images", "Price", "StockQuantity", "CreatedAt", "UpdatedAt"
             "#,
         )
         .bind(request.name)
         .bind(request.description)
+        .bind(request.category)
+        .bind(request.images)
         .bind(request.price)
         .bind(request.stock_quantity)
         .bind(Utc::now())
@@ -70,6 +72,8 @@ impl ProductRepository for PostgresProductRepository {
                 .create(CreateProductInput {
                     name: request.name,
                     description: request.description,
+                    category: request.category,
+                    images: request.images,
                     price: request.price,
                     stock_quantity: request.stock_quantity,
                 })
@@ -81,15 +85,19 @@ impl ProductRepository for PostgresProductRepository {
             UPDATE public.products
             SET "Name" = $1,
                 "Description" = $2,
-                "Price" = $3,
-                "StockQuantity" = $4,
-                "UpdatedAt" = $5
-            WHERE "Id" = $6
-            RETURNING "Id", "Name", "Description", "Price", "StockQuantity", "CreatedAt", "UpdatedAt"
+                "Category" = $3,
+                "Images" = $4,
+                "Price" = $5,
+                "StockQuantity" = $6,
+                "UpdatedAt" = $7
+            WHERE "Id" = $8
+            RETURNING "Id", "Name", "Description", "Category", "Images", "Price", "StockQuantity", "CreatedAt", "UpdatedAt"
             "#,
         )
         .bind(request.name)
         .bind(request.description)
+        .bind(request.category)
+        .bind(request.images)
         .bind(request.price)
         .bind(request.stock_quantity)
         .bind(Utc::now())

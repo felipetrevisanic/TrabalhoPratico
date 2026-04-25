@@ -5,6 +5,8 @@ import (
 	"errors"
 	"time"
 
+	"github.com/lib/pq"
+
 	"graphql/src/domain/entities"
 	domaininterfaces "graphql/src/domain/interfaces"
 )
@@ -19,7 +21,7 @@ func NewProductRepository(db *sql.DB) *ProductRepository {
 
 func (r *ProductRepository) GetByID(id int) (*entities.Product, error) {
 	const query = `
-		SELECT "Id", "Name", "Description", "Price", "StockQuantity", "CreatedAt", "UpdatedAt"
+		SELECT "Id", "Name", "Description", "Category", "Images", "Price", "StockQuantity", "CreatedAt", "UpdatedAt"
 		FROM public.products
 		WHERE "Id" = $1
 	`
@@ -32,6 +34,8 @@ func (r *ProductRepository) GetByID(id int) (*entities.Product, error) {
 		&item.ID,
 		&item.Name,
 		&item.Description,
+		&item.Category,
+		pq.Array(&item.Images),
 		&item.Price,
 		&item.StockQuantity,
 		&item.CreatedAt,
@@ -50,7 +54,7 @@ func (r *ProductRepository) GetByID(id int) (*entities.Product, error) {
 
 func (r *ProductRepository) GetAll() ([]entities.Product, error) {
 	const query = `
-		SELECT "Id", "Name", "Description", "Price", "StockQuantity", "CreatedAt", "UpdatedAt"
+		SELECT "Id", "Name", "Description", "Category", "Images", "Price", "StockQuantity", "CreatedAt", "UpdatedAt"
 		FROM public.products
 		ORDER BY "Id"
 	`
@@ -70,6 +74,8 @@ func (r *ProductRepository) GetAll() ([]entities.Product, error) {
 			&item.ID,
 			&item.Name,
 			&item.Description,
+			&item.Category,
+			pq.Array(&item.Images),
 			&item.Price,
 			&item.StockQuantity,
 			&item.CreatedAt,
@@ -87,9 +93,9 @@ func (r *ProductRepository) GetAll() ([]entities.Product, error) {
 
 func (r *ProductRepository) Create(input entities.CreateInput) (*entities.Product, error) {
 	const query = `
-		INSERT INTO public.products ("Name", "Description", "Price", "StockQuantity", "CreatedAt")
-		VALUES ($1, $2, $3, $4, $5)
-		RETURNING "Id", "Name", "Description", "Price", "StockQuantity", "CreatedAt", "UpdatedAt"
+		INSERT INTO public.products ("Name", "Description", "Category", "Images", "Price", "StockQuantity", "CreatedAt")
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		RETURNING "Id", "Name", "Description", "Category", "Images", "Price", "StockQuantity", "CreatedAt", "UpdatedAt"
 	`
 
 	var item entities.Product
@@ -100,6 +106,8 @@ func (r *ProductRepository) Create(input entities.CreateInput) (*entities.Produc
 		query,
 		input.Name,
 		input.Description,
+		input.Category,
+		pq.Array(input.Images),
 		input.Price,
 		input.StockQuantity,
 		now,
@@ -107,6 +115,8 @@ func (r *ProductRepository) Create(input entities.CreateInput) (*entities.Produc
 		&item.ID,
 		&item.Name,
 		&item.Description,
+		&item.Category,
+		pq.Array(&item.Images),
 		&item.Price,
 		&item.StockQuantity,
 		&item.CreatedAt,
@@ -130,6 +140,8 @@ func (r *ProductRepository) Update(id int, input entities.UpdateInput) (*entitie
 		return r.Create(entities.CreateInput{
 			Name:          input.Name,
 			Description:   input.Description,
+			Category:      input.Category,
+			Images:        input.Images,
 			Price:         input.Price,
 			StockQuantity: input.StockQuantity,
 		})
@@ -139,11 +151,13 @@ func (r *ProductRepository) Update(id int, input entities.UpdateInput) (*entitie
 		UPDATE public.products
 		SET "Name" = $1,
 			"Description" = $2,
-			"Price" = $3,
-			"StockQuantity" = $4,
-			"UpdatedAt" = $5
-		WHERE "Id" = $6
-		RETURNING "Id", "Name", "Description", "Price", "StockQuantity", "CreatedAt", "UpdatedAt"
+			"Category" = $3,
+			"Images" = $4,
+			"Price" = $5,
+			"StockQuantity" = $6,
+			"UpdatedAt" = $7
+		WHERE "Id" = $8
+		RETURNING "Id", "Name", "Description", "Category", "Images", "Price", "StockQuantity", "CreatedAt", "UpdatedAt"
 	`
 
 	var item entities.Product
@@ -153,6 +167,8 @@ func (r *ProductRepository) Update(id int, input entities.UpdateInput) (*entitie
 		query,
 		input.Name,
 		input.Description,
+		input.Category,
+		pq.Array(input.Images),
 		input.Price,
 		input.StockQuantity,
 		time.Now().UTC(),
@@ -161,6 +177,8 @@ func (r *ProductRepository) Update(id int, input entities.UpdateInput) (*entitie
 		&item.ID,
 		&item.Name,
 		&item.Description,
+		&item.Category,
+		pq.Array(&item.Images),
 		&item.Price,
 		&item.StockQuantity,
 		&item.CreatedAt,

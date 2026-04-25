@@ -13,18 +13,9 @@ public class ProductService : IProductService
         _productRepository = productRepository;
     }
 
-    public Product GetProductById(int id)
+    public Product? GetProductById(int id)
     {
-        return _productRepository.GetById(id)
-            ?? new Product
-            {
-                Id = id,
-                Name = $"Product {id}",
-                Description = "Product not found in sample list",
-                Price = 0,
-                StockQuantity = 0,
-                CreatedAt = DateTime.UtcNow
-            };
+        return _productRepository.GetById(id);
     }
 
     public IEnumerable<Product> GetAllProducts()
@@ -32,12 +23,14 @@ public class ProductService : IProductService
         return _productRepository.GetAll();
     }
 
-    public Product InsertProduct(string name, string description, decimal price, int stockQuantity)
+    public Product InsertProduct(string name, string description, string category, string[] images, decimal price, int stockQuantity)
     {
         var product = new Product
         {
             Name = name,
             Description = description,
+            Category = category,
+            Images = images,
             Price = price,
             StockQuantity = stockQuantity,
             CreatedAt = DateTime.UtcNow
@@ -46,7 +39,7 @@ public class ProductService : IProductService
         return _productRepository.Add(product);
     }
 
-    public Product UpdateProduct(int id, string name, string description, decimal price, int stockQuantity)
+    public Product UpdateProduct(int id, string name, string description, string category, string[] images, decimal price, int stockQuantity)
     {
         var product = _productRepository.GetById(id);
 
@@ -57,6 +50,8 @@ public class ProductService : IProductService
                 Id = id,
                 Name = name,
                 Description = description,
+                Category = category,
+                Images = images,
                 Price = price,
                 StockQuantity = stockQuantity,
                 CreatedAt = DateTime.UtcNow,
@@ -68,6 +63,8 @@ public class ProductService : IProductService
 
         product.Name = name;
         product.Description = description;
+        product.Category = category;
+        product.Images = images;
         product.Price = price;
         product.StockQuantity = stockQuantity;
         product.UpdatedAt = DateTime.UtcNow;

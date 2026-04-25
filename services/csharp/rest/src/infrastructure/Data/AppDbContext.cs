@@ -29,6 +29,14 @@ public class AppDbContext : DbContext
                 .HasMaxLength(500)
                 .IsRequired();
 
+            entity.Property(product => product.Category)
+                .HasMaxLength(100)
+                .IsRequired();
+
+            entity.Property(product => product.Images)
+                .HasColumnType("text[]")
+                .IsRequired();
+
             entity.Property(product => product.Price)
                 .HasPrecision(18, 2)
                 .IsRequired();

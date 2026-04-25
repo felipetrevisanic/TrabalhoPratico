@@ -20,6 +20,11 @@ public class ProductController : ControllerBase
     public ActionResult<ProductResponseDto> GetProductById([FromQuery] int id)
     {
         var product = _productService.GetProductById(id);
+        if (product is null)
+        {
+            return NotFound();
+        }
+
         return Ok(product);
     }
 

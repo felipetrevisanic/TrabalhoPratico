@@ -2,9 +2,10 @@ package server
 
 import (
 	"context"
-	"fmt"
 	"time"
 
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	appinterfaces "grpc/src/application/interfaces"
 	"grpc/src/domain/entities"
 	productv1 "grpc/src/interfaces/grpc/gen/productv1"
@@ -26,14 +27,7 @@ func (s *ProductServer) GetProductById(ctx context.Context, request *productv1.G
 	}
 
 	if item == nil {
-		item = &entities.Product{
-			ID:            int(request.Id),
-			Name:          fmt.Sprintf("Product %d", request.Id),
-			Description:   "Product not found in sample list",
-			Price:         0,
-			StockQuantity: 0,
-			CreatedAt:     time.Now().UTC(),
-		}
+		return nil, status.Error(codes.NotFound, "product not found")
 	}
 
 	return mapProduct(*item), nil
@@ -60,6 +54,8 @@ func (s *ProductServer) CreateProduct(ctx context.Context, request *productv1.Cr
 	item, err := s.service.Create(entities.CreateInput{
 		Name:          request.Name,
 		Description:   request.Description,
+		Category:      request.Category,
+		Images:        request.Images,
 		Price:         request.Price,
 		StockQuantity: int(request.StockQuantity),
 	})
@@ -74,6 +70,8 @@ func (s *ProductServer) UpdateProduct(ctx context.Context, request *productv1.Up
 	item, err := s.service.Update(int(request.Id), entities.UpdateInput{
 		Name:          request.Name,
 		Description:   request.Description,
+		Category:      request.Category,
+		Images:        request.Images,
 		Price:         request.Price,
 		StockQuantity: int(request.StockQuantity),
 	})
@@ -107,6 +105,8 @@ func mapProduct(item entities.Product) *productv1.ProductResponse {
 		Id:            int32(item.ID),
 		Name:          item.Name,
 		Description:   item.Description,
+		Category:      item.Category,
+		Images:        item.Images,
 		Price:         item.Price,
 		StockQuantity: int32(item.StockQuantity),
 		CreatedAt:     item.CreatedAt.UTC().Format(time.RFC3339Nano),

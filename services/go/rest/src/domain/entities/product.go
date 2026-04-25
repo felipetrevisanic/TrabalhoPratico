@@ -6,6 +6,8 @@ type Product struct {
 	ID            int        `json:"id"`
 	Name          string     `json:"name"`
 	Description   string     `json:"description"`
+	Category      string     `json:"category"`
+	Images        []string   `json:"images"`
 	Price         float64    `json:"price"`
 	StockQuantity int        `json:"stockQuantity"`
 	CreatedAt     time.Time  `json:"createdAt"`
@@ -13,15 +15,19 @@ type Product struct {
 }
 
 type CreateRequest struct {
-	Name          string  `json:"name"`
-	Description   string  `json:"description"`
-	Price         float64 `json:"price"`
-	StockQuantity int     `json:"stockQuantity"`
+	Name          string   `json:"name"`
+	Description   string   `json:"description"`
+	Category      string   `json:"category"`
+	Images        []string `json:"images"`
+	Price         float64  `json:"price"`
+	StockQuantity int      `json:"stockQuantity"`
 }
 
 type UpdateRequest struct {
-	Name          string  `json:"name"`
-	Description   string  `json:"description"`
-	Price         float64 `json:"price"`
-	StockQuantity int     `json:"stockQuantity"`
+	Name          string   `json:"name"`
+	Description   string   `json:"description"`
+	Category      string   `json:"category"`
+	Images        []string `json:"images"`
+	Price         float64  `json:"price"`
+	StockQuantity int      `json:"stockQuantity"`
 }

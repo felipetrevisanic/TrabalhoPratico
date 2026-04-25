@@ -1,7 +1,6 @@
 package graphql
 
 import (
-	"fmt"
 	"time"
 
 	gql "github.com/graphql-go/graphql"
@@ -19,14 +18,7 @@ func productByIDResolver(service appinterfaces.ProductService) gql.FieldResolveF
 		}
 
 		if item == nil {
-			return mapProduct(entities.Product{
-				ID:            id,
-				Name:          fmt.Sprintf("Product %d", id),
-				Description:   "Product not found in sample list",
-				Price:         0,
-				StockQuantity: 0,
-				CreatedAt:     time.Now().UTC(),
-			}), nil
+			return nil, nil
 		}
 
 		return mapProduct(*item), nil
@@ -56,6 +48,8 @@ func createProductResolver(service appinterfaces.ProductService) gql.FieldResolv
 		item, err := service.Create(entities.CreateInput{
 			Name:          input["name"].(string),
 			Description:   input["description"].(string),
+			Category:      input["category"].(string),
+			Images:        toStringSlice(input["images"]),
 			Price:         input["price"].(float64),
 			StockQuantity: input["stockQuantity"].(int),
 		})
@@ -75,6 +69,8 @@ func updateProductResolver(service appinterfaces.ProductService) gql.FieldResolv
 		item, err := service.Update(id, entities.UpdateInput{
 			Name:          input["name"].(string),
 			Description:   input["description"].(string),
+			Category:      input["category"].(string),
+			Images:        toStringSlice(input["images"]),
 			Price:         input["price"].(float64),
 			StockQuantity: input["stockQuantity"].(int),
 		})
@@ -104,6 +100,8 @@ func mapProduct(item entities.Product) map[string]any {
 		"id":            item.ID,
 		"name":          item.Name,
 		"description":   item.Description,
+		"category":      item.Category,
+		"images":        item.Images,
 		"price":         item.Price,
 		"stockQuantity": item.StockQuantity,
 		"createdAt":     item.CreatedAt.UTC().Format(time.RFC3339Nano),
@@ -115,4 +113,21 @@ func mapProduct(item entities.Product) map[string]any {
 	}
 
 	return response
+}
+
+func toStringSlice(value any) []string {
+	items, ok := value.([]any)
+	if !ok {
+		return []string{}
+	}
+
+	result := make([]string, 0, len(items))
+	for _, item := range items {
+		text, ok := item.(string)
+		if ok {
+			result = append(result, text)
+		}
+	}
+
+	return result
 }

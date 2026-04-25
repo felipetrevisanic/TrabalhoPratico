@@ -5,8 +5,6 @@ use axum::{
     extract::{Path, Query, State},
     http::StatusCode,
 };
-use chrono::Utc;
-use rust_decimal::Decimal;
 use serde::Deserialize;
 
 use crate::{
@@ -28,15 +26,7 @@ pub async fn get_product_by_id(
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    let response = product.unwrap_or(Product {
-        id: query.id,
-        name: format!("Product {}", query.id),
-        description: "Product not found in sample list".to_string(),
-        price: Decimal::ZERO,
-        stock_quantity: 0,
-        created_at: Utc::now(),
-        updated_at: None,
-    });
+    let response = product.ok_or(StatusCode::NOT_FOUND)?;
 
     Ok(Json(response))
 }

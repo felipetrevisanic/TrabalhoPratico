@@ -3,7 +3,7 @@ syntax = "proto3";
 package product.v1;
 
 option csharp_namespace = "ProductGrpc.V1";
-option go_package = "internal/grpc/gen/productv1;productv1";
+option go_package = "src/interfaces/grpc/gen/productv1;productv1";
 
 service ProductService {
   rpc GetProductById(GetProductByIdRequest) returns (ProductResponse);
@@ -18,10 +18,12 @@ message ProductResponse {
   int32 id = 1;
   string name = 2;
   string description = 3;
-  double price = 4;
-  int32 stock_quantity = 5;
-  string created_at = 6;
-  string updated_at = 7;
+  string category = 4;
+  repeated string images = 5;
+  double price = 6;
+  int32 stock_quantity = 7;
+  string created_at = 8;
+  string updated_at = 9;
 }
 
 message GetProductByIdRequest {
@@ -37,16 +39,20 @@ message GetAllProductsResponse {
 message CreateProductRequest {
   string name = 1;
   string description = 2;
-  double price = 3;
-  int32 stock_quantity = 4;
+  string category = 3;
+  repeated string images = 4;
+  double price = 5;
+  int32 stock_quantity = 6;
 }
 
 message UpdateProductRequest {
   int32 id = 1;
   string name = 2;
   string description = 3;
-  double price = 4;
-  int32 stock_quantity = 5;
+  string category = 4;
+  repeated string images = 5;
+  double price = 6;
+  int32 stock_quantity = 7;
 }
 
 message DeleteProductRequest {

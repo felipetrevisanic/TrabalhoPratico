@@ -5,7 +5,7 @@ namespace src.interfaces.graphql.queries;
 
 public class ProductQuery
 {
-    public Product ProductById([Service] IProductService productService, int id)
+    public Product? ProductById([Service] IProductService productService, int id)
     {
         return productService.GetProductById(id);
     }

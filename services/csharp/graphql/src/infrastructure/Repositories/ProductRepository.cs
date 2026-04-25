@@ -47,6 +47,8 @@ public class ProductRepository : IProductRepository
 
         existingProduct.Name = product.Name;
         existingProduct.Description = product.Description;
+        existingProduct.Category = product.Category;
+        existingProduct.Images = product.Images;
         existingProduct.Price = product.Price;
         existingProduct.StockQuantity = product.StockQuantity;
         existingProduct.CreatedAt = product.CreatedAt;

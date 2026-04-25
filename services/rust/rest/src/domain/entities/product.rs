@@ -10,6 +10,10 @@ pub struct Product {
     pub name: String,
     #[sqlx(rename = "Description")]
     pub description: String,
+    #[sqlx(rename = "Category")]
+    pub category: String,
+    #[sqlx(rename = "Images")]
+    pub images: Vec<String>,
     #[sqlx(rename = "Price")]
     pub price: Decimal,
     #[sqlx(rename = "StockQuantity")]
@@ -27,6 +31,8 @@ pub struct Product {
 pub struct CreateProductRequest {
     pub name: String,
     pub description: String,
+    pub category: String,
+    pub images: Vec<String>,
     pub price: Decimal,
     #[serde(rename = "stockQuantity")]
     pub stock_quantity: i32,
@@ -36,6 +42,8 @@ pub struct CreateProductRequest {
 pub struct UpdateProductRequest {
     pub name: String,
     pub description: String,
+    pub category: String,
+    pub images: Vec<String>,
     pub price: Decimal,
     #[serde(rename = "stockQuantity")]
     pub stock_quantity: i32,

@@ -4,6 +4,11 @@ export function buildProducts(profile) {
     return {
       name: `K6 Product ${String(number).padStart(4, '0')}`,
       description: `Dataset ${profile.label} item ${number}`,
+      category: number % 2 === 0 ? 'Hardware' : 'Peripherals',
+      images: [
+        `https://cdn.k6.local/${profile.label}/product-${String(number).padStart(4, '0')}-1.png`,
+        `https://cdn.k6.local/${profile.label}/product-${String(number).padStart(4, '0')}-2.png`,
+      ],
       price: Number((number * 3.75 + 10).toFixed(2)),
       stockQuantity: number * 2,
     };
@@ -36,6 +41,8 @@ export function buildUpdatedProduct(product, index) {
   return {
     name: `${product.name} Updated`,
     description: `${product.description} Updated ${index + 1}`,
+    category: `${product.category} Updated`,
+    images: product.images.map((image, imageIndex) => `${image}?v=${index + 1}-${imageIndex + 1}`),
     price: Number((product.price + 1.25).toFixed(2)),
     stockQuantity: product.stockQuantity + 5,
   };

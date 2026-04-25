@@ -29,6 +29,8 @@ func newSchema(service appinterfaces.ProductService) (gql.Schema, error) {
 			"id":            &gql.Field{Type: gql.NewNonNull(gql.Int)},
 			"name":          &gql.Field{Type: gql.NewNonNull(gql.String)},
 			"description":   &gql.Field{Type: gql.NewNonNull(gql.String)},
+			"category":      &gql.Field{Type: gql.NewNonNull(gql.String)},
+			"images":        &gql.Field{Type: gql.NewNonNull(gql.NewList(gql.NewNonNull(gql.String)))},
 			"price":         &gql.Field{Type: gql.NewNonNull(gql.Float)},
 			"stockQuantity": &gql.Field{Type: gql.NewNonNull(gql.Int)},
 			"createdAt":     &gql.Field{Type: gql.NewNonNull(gql.String)},
@@ -41,6 +43,8 @@ func newSchema(service appinterfaces.ProductService) (gql.Schema, error) {
 		Fields: gql.InputObjectConfigFieldMap{
 			"name":          &gql.InputObjectFieldConfig{Type: gql.NewNonNull(gql.String)},
 			"description":   &gql.InputObjectFieldConfig{Type: gql.NewNonNull(gql.String)},
+			"category":      &gql.InputObjectFieldConfig{Type: gql.NewNonNull(gql.String)},
+			"images":        &gql.InputObjectFieldConfig{Type: gql.NewNonNull(gql.NewList(gql.NewNonNull(gql.String)))},
 			"price":         &gql.InputObjectFieldConfig{Type: gql.NewNonNull(gql.Float)},
 			"stockQuantity": &gql.InputObjectFieldConfig{Type: gql.NewNonNull(gql.Int)},
 		},
@@ -51,6 +55,8 @@ func newSchema(service appinterfaces.ProductService) (gql.Schema, error) {
 		Fields: gql.InputObjectConfigFieldMap{
 			"name":          &gql.InputObjectFieldConfig{Type: gql.NewNonNull(gql.String)},
 			"description":   &gql.InputObjectFieldConfig{Type: gql.NewNonNull(gql.String)},
+			"category":      &gql.InputObjectFieldConfig{Type: gql.NewNonNull(gql.String)},
+			"images":        &gql.InputObjectFieldConfig{Type: gql.NewNonNull(gql.NewList(gql.NewNonNull(gql.String)))},
 			"price":         &gql.InputObjectFieldConfig{Type: gql.NewNonNull(gql.Float)},
 			"stockQuantity": &gql.InputObjectFieldConfig{Type: gql.NewNonNull(gql.Int)},
 		},

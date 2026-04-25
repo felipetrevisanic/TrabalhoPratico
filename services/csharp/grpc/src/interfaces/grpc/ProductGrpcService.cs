@@ -17,6 +17,11 @@ public class ProductGrpcService : ProductService.ProductServiceBase
     public override Task<ProductResponse> GetProductById(GetProductByIdRequest request, ServerCallContext context)
     {
         var product = _productService.GetProductById(request.Id);
+        if (product is null)
+        {
+            throw new RpcException(new Status(StatusCode.NotFound, "Product not found"));
+        }
+
         return Task.FromResult(ToResponse(product));
     }
 
@@ -29,13 +34,13 @@ public class ProductGrpcService : ProductService.ProductServiceBase
 
     public override Task<ProductResponse> CreateProduct(CreateProductRequest request, ServerCallContext context)
     {
-        var product = _productService.InsertProduct(request.Name, request.Description, Convert.ToDecimal(request.Price), request.StockQuantity);
+        var product = _productService.InsertProduct(request.Name, request.Description, request.Category, request.Images.ToArray(), Convert.ToDecimal(request.Price), request.StockQuantity);
         return Task.FromResult(ToResponse(product));
     }
 
     public override Task<ProductResponse> UpdateProduct(UpdateProductRequest request, ServerCallContext context)
     {
-        var product = _productService.UpdateProduct(request.Id, request.Name, request.Description, Convert.ToDecimal(request.Price), request.StockQuantity);
+        var product = _productService.UpdateProduct(request.Id, request.Name, request.Description, request.Category, request.Images.ToArray(), Convert.ToDecimal(request.Price), request.StockQuantity);
         return Task.FromResult(ToResponse(product));
     }
 
@@ -57,15 +62,19 @@ public class ProductGrpcService : ProductService.ProductServiceBase
 
     private static ProductResponse ToResponse(Product product)
     {
-        return new ProductResponse
+        var response = new ProductResponse
         {
             Id = product.Id,
             Name = product.Name,
             Description = product.Description,
+            Category = product.Category,
             Price = Convert.ToDouble(product.Price),
             StockQuantity = product.StockQuantity,
             CreatedAt = product.CreatedAt.ToUniversalTime().ToString("O"),
             UpdatedAt = product.UpdatedAt?.ToUniversalTime().ToString("O") ?? string.Empty
         };
+
+        response.Images.AddRange(product.Images);
+        return response;
     }
 }

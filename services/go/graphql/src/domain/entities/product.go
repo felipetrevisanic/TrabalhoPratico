@@ -6,6 +6,8 @@ type Product struct {
 	ID            int        `json:"id"`
 	Name          string     `json:"name"`
 	Description   string     `json:"description"`
+	Category      string     `json:"category"`
+	Images        []string   `json:"images"`
 	Price         float64    `json:"price"`
 	StockQuantity int        `json:"stockQuantity"`
 	CreatedAt     time.Time  `json:"createdAt"`
@@ -15,6 +17,8 @@ type Product struct {
 type CreateInput struct {
 	Name          string
 	Description   string
+	Category      string
+	Images        []string
 	Price         float64
 	StockQuantity int
 }
@@ -22,6 +26,8 @@ type CreateInput struct {
 type UpdateInput struct {
 	Name          string
 	Description   string
+	Category      string
+	Images        []string
 	Price         float64
 	StockQuantity int
 }

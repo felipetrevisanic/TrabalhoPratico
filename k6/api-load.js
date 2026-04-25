@@ -53,6 +53,37 @@ function ensureValue(operationName, value, message) {
   return value;
 }
 
+function getStockQuantity(product) {
+  return product.stockQuantity ?? product.stock_quantity;
+}
+
+function getImages(product) {
+  return Array.isArray(product.images) ? product.images : [];
+}
+
+function arraysEqual(left, right) {
+  if (!Array.isArray(left) || !Array.isArray(right) || left.length !== right.length) {
+    return false;
+  }
+
+  return left.every((value, index) => value === right[index]);
+}
+
+function productsMatch(actual, expected) {
+  if (!actual || !expected) {
+    return false;
+  }
+
+  return (
+    actual.name === expected.name &&
+    actual.description === expected.description &&
+    actual.category === expected.category &&
+    Number(actual.price) === Number(expected.price) &&
+    Number(getStockQuantity(actual)) === Number(expected.stockQuantity) &&
+    arraysEqual(getImages(actual), expected.images)
+  );
+}
+
 function restHeaders() {
   return {
     headers: {
@@ -153,6 +184,7 @@ function createProductRest(product) {
   const response = http.post(`${target.baseUrl}/Product`, JSON.stringify(product), restHeaders());
   const ok = recordCheck('create_product', response, {
     'rest create status is 200': (res) => res.status === 200,
+    'rest create echoes payload': (res) => productsMatch(JSON.parse(res.body), product),
   });
   recordResult('create_product', ok, Date.now() - startedAt);
   const body = JSON.parse(response.body);
@@ -160,22 +192,26 @@ function createProductRest(product) {
   return ensureValue('create_product', body.id, 'resposta REST sem id');
 }
 
-function getAllRest(expectedCount) {
+function getAllRest(expectedProducts) {
   const startedAt = Date.now();
   const response = http.get(`${target.baseUrl}/Product/all`);
   const ok = recordCheck('get_all_products', response, {
     'rest get-all status is 200': (res) => res.status === 200,
-    'rest get-all expected count': (res) => JSON.parse(res.body).length === expectedCount,
+    'rest get-all expected count': (res) => JSON.parse(res.body).length === expectedProducts.length,
+    'rest get-all includes full payloads': (res) => {
+      const body = JSON.parse(res.body);
+      return expectedProducts.every((expected) => body.some((item) => productsMatch(item, expected)));
+    },
   });
   recordResult('get_all_products', ok, Date.now() - startedAt);
 }
 
-function getByIdRest(id, expectedName) {
+function getByIdRest(id, expectedProduct) {
   const startedAt = Date.now();
   const response = http.get(`${target.baseUrl}/Product?id=${id}`);
   const ok = recordCheck('get_product_by_id', response, {
     'rest get-by-id status is 200': (res) => res.status === 200,
-    'rest get-by-id expected name': (res) => JSON.parse(res.body).name === expectedName,
+    'rest get-by-id expected payload': (res) => productsMatch(JSON.parse(res.body), expectedProduct),
   });
   recordResult('get_product_by_id', ok, Date.now() - startedAt);
 }
@@ -189,7 +225,7 @@ function updateProductRest(id, product) {
   );
   const ok = recordCheck('update_product', response, {
     'rest update status is 200': (res) => res.status === 200,
-    'rest update expected name': (res) => JSON.parse(res.body).name === product.name,
+    'rest update expected payload': (res) => productsMatch(JSON.parse(res.body), product),
   });
   recordResult('update_product', ok, Date.now() - startedAt);
   updatedProductsCounter.add(1, { target: target.id });
@@ -203,16 +239,25 @@ function createProductGraphQL(product) {
         createProduct(input: $input) {
           id
           name
+          description
+          category
+          images
+          price
+          stockQuantity
         }
       }
     `,
     { input: product },
   );
+  const ok = check(body, {
+    'graphql create echoes payload': (data) => productsMatch(data.data?.createProduct, product),
+  }, { operation: 'create_product_payload', target: target.id });
+  requestFailureRate.add(ok ? 0 : 1, { operation: 'create_product_payload', target: target.id });
   createdProductsCounter.add(1, { target: target.id });
   return ensureValue('create_product', body.data?.createProduct?.id, 'resposta GraphQL sem id');
 }
 
-function getAllGraphQL(expectedCount) {
+function getAllGraphQL(expectedProducts) {
   const body = graphQLRequest(
     'get_all_products',
     `
@@ -220,18 +265,25 @@ function getAllGraphQL(expectedCount) {
         allProducts {
           id
           name
+          description
+          category
+          images
+          price
+          stockQuantity
         }
       }
     `,
   );
 
   const ok = check(body, {
-    'graphql get-all expected count': (data) => data.data.allProducts.length === expectedCount,
+    'graphql get-all expected count': (data) => data.data.allProducts.length === expectedProducts.length,
+    'graphql get-all includes full payloads': (data) =>
+      expectedProducts.every((expected) => data.data.allProducts.some((item) => productsMatch(item, expected))),
   }, { operation: 'get_all_products', target: target.id });
   requestFailureRate.add(ok ? 0 : 1, { operation: 'get_all_products_count', target: target.id });
 }
 
-function getByIdGraphQL(id, expectedName) {
+function getByIdGraphQL(id, expectedProduct) {
   const body = graphQLRequest(
     'get_product_by_id',
     `
@@ -239,6 +291,11 @@ function getByIdGraphQL(id, expectedName) {
         productById(id: $id) {
           id
           name
+          description
+          category
+          images
+          price
+          stockQuantity
         }
       }
     `,
@@ -246,7 +303,7 @@ function getByIdGraphQL(id, expectedName) {
   );
 
   const ok = check(body, {
-    'graphql get-by-id expected name': (data) => data.data.productById.name === expectedName,
+    'graphql get-by-id expected payload': (data) => productsMatch(data.data.productById, expectedProduct),
   }, { operation: 'get_product_by_id_name', target: target.id });
   requestFailureRate.add(ok ? 0 : 1, { operation: 'get_product_by_id_name', target: target.id });
 }
@@ -259,6 +316,11 @@ function updateProductGraphQL(id, product) {
         updateProduct(id: $id, input: $input) {
           id
           name
+          description
+          category
+          images
+          price
+          stockQuantity
         }
       }
     `,
@@ -272,7 +334,7 @@ function updateProductGraphQL(id, product) {
   );
 
   const ok = check(body, {
-    'graphql update expected name': (data) => data.data.updateProduct.name === product.name,
+    'graphql update expected payload': (data) => productsMatch(data.data.updateProduct, product),
   }, { operation: 'update_product_name', target: target.id });
   requestFailureRate.add(ok ? 0 : 1, { operation: 'update_product_name', target: target.id });
   updatedProductsCounter.add(1, { target: target.id });
@@ -282,25 +344,33 @@ function createProductGrpc(product) {
   const response = grpcInvoke('create_product', 'product.v1.ProductService/CreateProduct', {
     name: product.name,
     description: product.description,
+    category: product.category,
+    images: product.images,
     price: product.price,
     stock_quantity: product.stockQuantity,
   });
+  const ok = check(response, {
+    'grpc create echoes payload': (res) => productsMatch(res.message, product),
+  }, { operation: 'create_product_payload', target: target.id });
+  requestFailureRate.add(ok ? 0 : 1, { operation: 'create_product_payload', target: target.id });
   createdProductsCounter.add(1, { target: target.id });
   return ensureValue('create_product', response.message?.id, 'resposta gRPC sem id');
 }
 
-function getAllGrpc(expectedCount) {
+function getAllGrpc(expectedProducts) {
   const response = grpcInvoke('get_all_products', 'product.v1.ProductService/GetAllProducts', {});
   const ok = check(response, {
-    'grpc get-all expected count': (res) => res.message.products.length === expectedCount,
+    'grpc get-all expected count': (res) => res.message.products.length === expectedProducts.length,
+    'grpc get-all includes full payloads': (res) =>
+      expectedProducts.every((expected) => res.message.products.some((item) => productsMatch(item, expected))),
   }, { operation: 'get_all_products_count', target: target.id });
   requestFailureRate.add(ok ? 0 : 1, { operation: 'get_all_products_count', target: target.id });
 }
 
-function getByIdGrpc(id, expectedName) {
+function getByIdGrpc(id, expectedProduct) {
   const response = grpcInvoke('get_product_by_id', 'product.v1.ProductService/GetProductById', { id });
   const ok = check(response, {
-    'grpc get-by-id expected name': (res) => res.message.name === expectedName,
+    'grpc get-by-id expected payload': (res) => productsMatch(res.message, expectedProduct),
   }, { operation: 'get_product_by_id_name', target: target.id });
   requestFailureRate.add(ok ? 0 : 1, { operation: 'get_product_by_id_name', target: target.id });
 }
@@ -310,11 +380,13 @@ function updateProductGrpc(id, product) {
     id,
     name: product.name,
     description: product.description,
+    category: product.category,
+    images: product.images,
     price: product.price,
     stock_quantity: product.stockQuantity,
   });
   const ok = check(response, {
-    'grpc update expected name': (res) => res.message.name === product.name,
+    'grpc update expected payload': (res) => productsMatch(res.message, product),
   }, { operation: 'update_product_name', target: target.id });
   requestFailureRate.add(ok ? 0 : 1, { operation: 'update_product_name', target: target.id });
   updatedProductsCounter.add(1, { target: target.id });
@@ -322,48 +394,53 @@ function updateProductGrpc(id, product) {
 
 function runRestScenario() {
   const ids = products.map((product) => createProductRest(product));
-  getAllRest(products.length);
+  getAllRest(products);
 
   const readIndexes = pickIndexes(ids.length, profile.readSampleSize);
   for (const index of readIndexes) {
-    getByIdRest(ids[index], products[index].name);
+    getByIdRest(ids[index], products[index]);
   }
 
   const updateIndexes = pickIndexes(ids.length, profile.updateSampleSize);
   for (const index of updateIndexes) {
     const updated = buildUpdatedProduct(products[index], index);
     updateProductRest(ids[index], updated);
+    products[index] = updated;
   }
 }
 
 function runGraphQLScenario() {
   const ids = products.map((product) => createProductGraphQL(product));
-  getAllGraphQL(products.length);
+  getAllGraphQL(products);
 
   const readIndexes = pickIndexes(ids.length, profile.readSampleSize);
   for (const index of readIndexes) {
-    getByIdGraphQL(ids[index], products[index].name);
+    getByIdGraphQL(ids[index], products[index]);
   }
 
   const updateIndexes = pickIndexes(ids.length, profile.updateSampleSize);
   for (const index of updateIndexes) {
-    updateProductGraphQL(ids[index], buildUpdatedProduct(products[index], index));
+    const updated = buildUpdatedProduct(products[index], index);
+    updateProductGraphQL(ids[index], updated);
+    products[index] = updated;
   }
 }
 
 function runGrpcScenario() {
   ensureGrpcConnection();
   const ids = products.map((product) => createProductGrpc(product));
-  getAllGrpc(products.length);
+  getAllGrpc(products);
 
   const readIndexes = pickIndexes(ids.length, profile.readSampleSize);
   for (const index of readIndexes) {
-    getByIdGrpc(ids[index], products[index].name);
+    getByIdGrpc(ids[index], products[index]);
   }
 
   const updateIndexes = pickIndexes(ids.length, profile.updateSampleSize);
   for (const index of updateIndexes) {
-    updateProductGrpc(ids[index], buildUpdatedProduct(products[index], index));
+    const updated = buildUpdatedProduct(products[index], index);
+    updateProductGrpc(ids[index], updated);
+    products[index] = updated;
   }
 }
 

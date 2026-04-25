@@ -1,6 +1,5 @@
 use std::sync::Arc;
 
-use chrono::Utc;
 use rust_decimal::{
     Decimal,
     prelude::{FromPrimitive, ToPrimitive},
@@ -42,15 +41,7 @@ impl ProductGrpcContract for ProductGrpcService {
             .await
             .map_err(internal_error)?;
 
-        let response = product.unwrap_or(Product {
-            id: request.id,
-            name: format!("Product {}", request.id),
-            description: "Product not found in sample list".to_string(),
-            price: Decimal::ZERO,
-            stock_quantity: 0,
-            created_at: Utc::now(),
-            updated_at: None,
-        });
+        let response = product.ok_or_else(|| Status::not_found("product not found"))?;
 
         Ok(Response::new(map_product(response)))
     }
@@ -80,6 +71,8 @@ impl ProductGrpcContract for ProductGrpcService {
             .create(CreateProductInput {
                 name: request.name,
                 description: request.description,
+                category: request.category,
+                images: request.images,
                 price,
                 stock_quantity: request.stock_quantity,
             })
@@ -104,6 +97,8 @@ impl ProductGrpcContract for ProductGrpcService {
                 UpdateProductInput {
                     name: request.name,
                     description: request.description,
+                    category: request.category,
+                    images: request.images,
                     price,
                     stock_quantity: request.stock_quantity,
                 },
@@ -145,6 +140,8 @@ fn map_product(product: Product) -> ProductResponse {
         id: product.id,
         name: product.name,
         description: product.description,
+        category: product.category,
+        images: product.images,
         price: product.price.to_f64().unwrap_or_default(),
         stock_quantity: product.stock_quantity,
         created_at: product.created_at.to_rfc3339(),
